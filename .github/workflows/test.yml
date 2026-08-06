@@ -24,8 +24,24 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      # test:integration downloads live third-party CSS (postcss-parser-tests'
+      # testOnReal) and round-trips it; today's github.githubassets.com CSS no
+      # longer matches what this 2023 release was tested against, so it is
+      # excluded here. Every other suite `pnpm test` runs is kept, run explicitly.
       - name: Run tests
-        run: pnpm test
+        run: pnpm run test:types && pnpm run test:version && pnpm run test:size && pnpm run test:coverage
+      - name: Pack the release tarball
+        run: |
+          ./node_modules/.bin/clean-publish --without-publish --temp-dir "${{ runner.temp }}/publish"
+          mkdir -p "$GITHUB_WORKSPACE/pack-output"
+          cd "${{ runner.temp }}/publish"
+          npm pack --ignore-scripts --pack-destination "$GITHUB_WORKSPACE/pack-output"
+      - name: Upload the release tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball
+          path: pack-output/postcss-8.4.31.tgz
+          if-no-files-found: error
   short:
     runs-on: ubuntu-latest
     strategy:
@@ -60,6 +76,14 @@ jobs:
           - 10
     name: Node.js ${{ matrix.node-version }} Quick
     steps:
+      # Freeze dependency resolution to the release date: this old-node job runs
+      # a non-frozen `pnpm install` + `pnpm install typescript@4`, which would
+      # otherwise re-resolve `postcss-parser-tests@^8.8.0` to 8.9.0 (published
+      # 2025, uses `require('node:fs')`) and break Node < 14.18.
+      - name: Configure npm time machine registry
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken 2023-09-28T22:15:08.722000Z
       - name: Checkout the repository
         uses: actions/checkout@v4
       - name: Install pnpm
@@ -87,7 +111,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 8
       - name: Install Node.js LTS
         uses: actions/setup-node@v3
         with:
