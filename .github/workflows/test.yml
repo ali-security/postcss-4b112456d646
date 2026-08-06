@@ -3,13 +3,14 @@ on:
   push:
     branches:
       - main
+      - master
   pull_request:
 permissions:
   contents: read
 jobs:
   full:
     name: Node.js Latest Full
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -43,7 +44,7 @@ jobs:
           path: pack-output/postcss-8.4.31.tgz
           if-no-files-found: error
   short:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         node-version:
@@ -67,7 +68,7 @@ jobs:
       - name: Run unit tests
         run: pnpm run unit
   old:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         node-version:
@@ -103,7 +104,7 @@ jobs:
       - name: Run unit tests
         run: pnpm run old
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: Windows Quick
     steps:
       - name: Checkout the repository
